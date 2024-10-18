@@ -1,93 +1,65 @@
 import random
-import os
+from tkinter import *
+from tkinter import messagebox
 
 
 class Player:
     def __init__(self):
-        self.name = ""
-        self.symbol = ""
-
-    def choose_name(self):
-        if not self.name:
-            name = input("What is your name? ")
-            while not name.isalpha():
-                print("You can't use special characters or numbers in your name.")
-                name = input("What is your name? ")
-            self.name = name
-
-    def choose_symbol(self):
-        if not self.symbol:
-            symbol = input("Enter Your Desired Symbol: ")
-            while len(symbol) != 1 or not symbol.isalpha():
-                print(
-                    "You can't use special characters or numbers in your symbol and it must be one letter."
-                )
-                symbol = input("Enter Your Desired Symbol: ")
-            self.symbol = symbol.upper()
-
-
-class Menu:
-    def display_main_menu(self):
-        main_menu = """
-            -------------Main Menu-------------
-        1. Start Game
-        2. Quit Game
-        """
-        print(main_menu)
-        choice = int(input("Enter your choice(1-2): "))
-        while choice not in [1, 2]:
-            print("Invalid choice.")
-            choice = int(input("Enter your choice(1-2): "))
-        return choice
-
-    def display_endgame_menu(self):
-        endgame_menu = """
-            -------------Game Over-------------
-        1. Play Again
-        2. Quit Game
-        """
-        print(endgame_menu)
-        choice = int(input("Enter your choice(1-2): "))
-        while choice not in [1, 2]:
-            print("Invalid choice.")
-            choice = int(input("Enter your choice(1-2): "))
-        return choice
+        self.name = "Player"
+        self.symbol = "X"
 
 
 class Board:
-    def __init__(self):
-        self.board = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]
+    def __init__(self, root, game):
+        self.board = [["" for _ in range(3)] for _ in range(3)]
+        self.buttons = []
+        self.root = root
+        self.game = game
+        self.create_board()
 
-    def display_board(self):
-        for row in self.board:
-            print(" | ".join(row))
-            print("-" * 9)
+    def create_board(self):
+        for row in range(3):
+            row_buttons = []
+            for col in range(3):
+                button = Button(
+                    self.root,
+                    text="",
+                    font=('Arial', 24),
+                    width=5,
+                    height=2,
+                    fg="green",  # Set the symbol color to green
+                    command=lambda r=row, c=col: self.game.player_move(r, c)
+                )
+                button.grid(row=row, column=col, padx=5, pady=5)
+                row_buttons.append(button)
+            self.buttons.append(row_buttons)
 
-    def update_board(self, position, symbol):
-        row = (position - 1) // 3
-        col = (position - 1) % 3
+    def update_board(self, row, col, symbol):
         self.board[row][col] = symbol
-        os.system("cls")
+        self.buttons[row][col].config(text=symbol, state="disabled")
 
-    def is_position_available(self, position):
-        row = (position - 1) // 3
-        col = (position - 1) % 3
-        return self.board[row][col] not in ["X", "O"]
+    def is_position_available(self, row, col):
+        return self.board[row][col] == ""
 
     def reset_board(self):
-        self.board = [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]]
+        self.board = [["" for _ in range(3)] for _ in range(3)]
+        for row in range(3):
+            for col in range(3):
+                self.buttons[row][col].config(text="", state="normal")
 
 
 class Game:
-    def __init__(self):
-        self.board = Board()
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Tic-Tac-Toe")
+        self.root.geometry("345x450")
         self.player = Player()
-        self.menu = Menu()
-        self.computer_symbol = ""
-        self.current_player = ""
+        self.board = Board(self.root, self)
+        self.current_player = self.player
+        self.computer_symbol = "O"
         self.winning_combinations = [
             [(0, 0), (0, 1), (0, 2)],
-            [(1, 0), (1, 1), (1, 2)],
+            [(1, 0), (1, 1), (1, 2)], 
             [(2, 0), (2, 1), (2, 2)],  # Rows
             [(0, 0), (1, 0), (2, 0)],
             [(0, 1), (1, 1), (2, 1)],
@@ -95,71 +67,46 @@ class Game:
             [(0, 0), (1, 1), (2, 2)],
             [(0, 2), (1, 1), (2, 0)],  # Diagonals
         ]
-        self.player_wins = 0
-        self.computer_wins = 0
-        self.draws = 0
+        self.info_label = Label(root, text="Player's Turn (X)", font=("Arial", 16))
+        self.info_label.grid(row=3, column=0, columnspan=3, pady=10)
+        self.restart_button = Button(
+            root, text="Restart Game", command=self.restart_game, font=("Arial", 12)
+        )
+        self.restart_button.grid(row=4, column=0, columnspan=3, pady=10)
 
-    def start_game(self):
-        if self.menu.display_main_menu() == 1:
-            self.player.choose_name()
-            self.player.choose_symbol()
-            self.current_player = self.player.name
-            self.computer_symbol = "X" if self.player.symbol == "O" else "O"
-            self.play_game()
-
-    def play_game(self):
-        while True:
-            while True:
-                self.board.display_board()
-                if self.current_player == self.player.name:
-                    self.human_move()
-                else:
-                    self.computer_move()
-                if self.check_win(self.player.symbol):
-                    print(f"Congratulations {self.player.name}, you won!")
-                    self.player_wins += 1
-                    break
-                if self.check_win(self.computer_symbol):
-                    print("Computer wins!")
-                    self.computer_wins += 1
-                    break
-                if self.check_draw():
-                    print("It's a draw!")
-                    self.draws += 1
-                    break
-                self.switch_player()
-            choice = self.menu.display_endgame_menu()
-            if choice == 1:
-                self.board.reset_board()
+    def player_move(self, row, col):
+        if self.board.is_position_available(row, col):
+            self.board.update_board(row, col, self.player.symbol)
+            if self.check_win(self.player.symbol):
+                self.info_label.config(text="Player Wins!")
+                self.end_game("Player wins!")
+            elif self.check_draw():
+                self.info_label.config(text="It's a Draw!")
+                self.end_game("It's a draw!")
             else:
-                self.display_scores()
-                break
-
-    def human_move(self):
-        position = int(input("Enter your move (1-9): "))
-        while (
-            position < 1
-            or position > 9
-            or not self.board.is_position_available(position)
-        ):
-            print("Invalid move. Please try again.")
-            position = int(input("Enter your move (1-9): "))
-        self.board.update_board(position, self.player.symbol)
+                self.info_label.config(text="Computer's Turn (O)")
+                self.disable_player_buttons()  # Disable player buttons
+                self.root.after(1000, self.computer_move)
 
     def computer_move(self):
         available_positions = [
-            i for i in range(1, 10) if self.board.is_position_available(i)
+            (r, c)
+            for r in range(3)
+            for c in range(3)
+            if self.board.is_position_available(r, c)
         ]
-        position = random.choice(available_positions)
-        self.board.update_board(position, self.computer_symbol)
-        print(f"Computer placed '{self.computer_symbol}' at position {position}.")
-
-    def switch_player(self):
-        self.current_player = (
-            self.player.name
-            if self.current_player == self.computer_symbol
-            else self.computer_symbol
-        )
+        if available_positions:
+            row, col = random.choice(available_positions)
+            self.board.update_board(row, col, self.computer_symbol)
+            if self.check_win(self.computer_symbol):
+                self.info_label.config(text="Computer Wins!")
+                self.end_game("Computer wins!")
+            elif self.check_draw():
+                self.info_label.config(text="It's a Draw!")
+                self.end_game("It's a draw!")
+            else:
+                self.info_label.config(text="Player's Turn (X)")
+                self.enable_player_buttons()  # Re-enable player buttons
 
     def check_win(self, symbol):
         for combination in self.winning_combinations:
@@ -168,17 +115,38 @@ class Game:
         return False
 
     def check_draw(self):
-        for row in self.board.board:
-            for cell in row:
-                if cell not in ["X", "O"]:
-                    return False
-        return True
+        return all(cell != "" for row in self.board.board for cell in row)
 
-    def display_scores(self):
-        print(f"Player Wins: {self.player_wins}")
-        print(f"Computer Wins: {self.computer_wins}")
-        print(f"Draws: {self.draws}")
+    def end_game(self, message):
+        messagebox.showinfo("Game Over", message)
+        for row in self.board.buttons:
+            for button in row:
+                button.config(state="disabled")
+
+    def restart_game(self):
+        self.board.reset_board()
+        self.info_label.config(text="Player's Turn (X)")
+        self.enable_player_buttons()  # Re-enable buttons when restarting
+
+    def disable_player_buttons(self):
+        for row in self.board.buttons:
+            for button in row:
+                button.config(state="disabled")
+
+    def enable_player_buttons(self):
+        for row in self.board.buttons:
+            for button in row:
+                if button.cget("text") == "":
+                    button.config(state="normal")
 
 
-game = Game()
-game.start_game()
+root = Tk()
+root.resizable(False , False)
+supermario_icon = PhotoImage(file= "pngegg.png")
+root.iconphoto(True , supermario_icon)
+root.config(background="#000")
+
+
+
+game = Game(root)
+root.mainloop()
